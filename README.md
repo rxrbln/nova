@@ -7,7 +7,7 @@ Nava isn't just a language it's a philosophy: that the complexity of modern syst
 
 # 🛰️ Nova Language Syntax Sheet
 
-Nova is a hybrid of simplified C and Lua, designed for clarity and modern expression. It uses `fn` for function declarations and omits parentheses in control flow. Blocks can be defined using **indentation or curly braces `{}`** (your choice).
+Nova is a modern simplified C++ with a touch of Lua, designed for clarity and modern expression. It uses `fn` for function declarations, first class multiple return times and omits parentheses for conditional statements, and optional curly braces for single expression functions, too.
 
 ---
 
@@ -29,7 +29,8 @@ Nova is a hybrid of simplified C and Lua, designed for clarity and modern expres
 ```
 fn       if       else     for      return
 break    continue class    enum     import
-typeof   sizeof   match    case
+typeof   sizeof   match    case     template
+try      catch
 ```
 
 ---
@@ -53,8 +54,8 @@ null        // null value
 +   -   *   /   %         // arithmetic  
 ==  !=  <   >   <=  >=    // comparison  
 &&  ||  !                 // logical  
-=   +=  -=  *=  /=        // assignment  
 &   |   ^   ~   <<  >>    // bitwise
+=   +=  -=  *=  /=  ...   // assignment  
 ```
 
 ---
