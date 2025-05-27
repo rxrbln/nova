@@ -7,6 +7,10 @@ local code = [[
       return x * x;
     } else
       return -x * x
+
+    for x=2; x < 0; x+2 {
+      x = x + 2
+    }
   }
 
   int y = square(5);

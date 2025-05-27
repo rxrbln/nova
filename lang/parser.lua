@@ -25,7 +25,7 @@ local Precedence = {
 
 -- Lexer: returns tokens as {type=..., value=...}
 function Parser.tokenize(input)
-  local keywords = {["fn"]=true, ["if"]=true, ["else"]=true, ["while"]=true, ["return"]=true}
+  local keywords = {["fn"]=true, ["if"]=true, ["else"]=true, ["for"]=true, ["return"]=true}
   local tokens, i, len = {}, 1, #input
 
   local function is_space(c) return c == ' ' or c == '\n' or c == '\r' or c == '\t' end
@@ -155,8 +155,8 @@ function Parser.new(tokens)
      return self:parse_function()
     elseif tok.type == TokenType.Keyword and tok.value == "if" then
       return self:parse_if()
-    elseif tok.type == TokenType.Keyword and tok.value == "while" then
-      return self:parse_while()
+    elseif tok.type == TokenType.Keyword and tok.value == "for" then
+      return self:parse_for()
     elseif tok.type == TokenType.Keyword and tok.value == "return" then
       self:next()
       return {type="return", value=self:parse_expression()}
@@ -226,12 +226,23 @@ function Parser.new(tokens)
     return {type="if", cond=cond, thenBranch=then_branch, elseBranch=else_branch}
   end
 
-  function self:parse_while()
-    self:expect("while")
+  function self:parse_for()
+    self:expect("for")
+
+    -- Parse init statement
+    local init = self:parse_statement()
+    self:expect(";")
+
+    -- Parse condition
     local cond = self:parse_expression()
+    self:expect(";")
+    -- Parse update expression (treat as a statement, e.g., assignment)
+    local update = self:parse_statement()
+    -- Parse body
     local body = self:parse_block()
-    return {type="while", cond=cond, body=body}
-  end
+
+    return {type="for", init=init, cond=cond, update=update, body=body}
+end
 
   function self:parse()
     local program = {}
