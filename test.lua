@@ -2,6 +2,13 @@ local Parser = require("lang/parser")
 
 local code = [[
   typedef int myint;
+
+  struct Vec3 {
+    float x;
+    float y;
+    float z;
+  }
+
   // test
   fn int, float square(int x, float y) {
     a = x;

@@ -25,7 +25,8 @@ local Precedence = {
 
 -- Lexer: returns tokens as {type=..., value=...}
 function Parser.tokenize(input)
-  local keywords = {["fn"]=true, ["if"]=true, ["else"]=true, ["for"]=true, ["return"]=true, ["typedef"]=true}
+  local keywords = {["fn"]=true, ["if"]=true, ["else"]=true, ["for"]=true, ["return"]=true,
+    ["typedef"]=true, ["struct"]=true}
   local tokens, i, len = {}, 1, #input
 
   local function is_space(c) return c == ' ' or c == '\n' or c == '\r' or c == '\t' end
@@ -159,6 +160,8 @@ function Parser.new(tokens)
       return self:parse_for()
     elseif tok.type == TokenType.Keyword and tok.value == "typedef" then
       return self:parse_typedef()
+    elseif tok.type == TokenType.Keyword and tok.value == "struct" then
+      return self:parse_struct()
     elseif tok.type == TokenType.Keyword and tok.value == "return" then
       self:next()
       return {type="return", value=self:parse_expression()}
@@ -186,6 +189,22 @@ function Parser.new(tokens)
     end
     if not one then self:expect("}") end
     return body
+  end
+
+  function self:parse_struct()
+    self:expect("struct")
+    local name = self:expect(TokenType.Ident).value
+    self:expect("{")
+    local fields = {}
+    while self:peek().value ~= "}" do
+      local field_type = self:parse_type()
+      local field_name = self:expect(TokenType.Ident).value
+      self:expect(";")
+      table.insert(fields, {type = field_type, name = field_name})
+    end
+    self:expect("}")
+
+    return {type = "struct", name = name, fields = fields}
   end
 
   function self:parse_type()
