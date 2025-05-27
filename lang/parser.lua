@@ -171,13 +171,18 @@ function Parser.new(tokens)
   end
 
   function self:parse_block()
-    self:expect("{")
+    local one = self:peek().value ~= "{" 
+    if not one then self:expect("{") end
+
     local body = {}
     while self:peek().value ~= "}" do
       table.insert(body, self:parse_statement())
-      if self:peek().value == ";" then self:next() end
+      if self:peek().value == ";" then
+        self:next()
+        if one then break end
+      end
     end
-    self:expect("}")
+    if not one then self:expect("}") end
     return body
   end
 

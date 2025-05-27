@@ -2,8 +2,11 @@ local Parser = require("lang/parser")
 
 local code = [[
   // test
-  fn square(int ) {
-    return x * x;
+  fn square(int) {
+    if (x > 0) {
+      return x * x;
+    } else
+      return -x * x
   }
 
   int y = square(5);
