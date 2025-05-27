@@ -28,9 +28,9 @@ Nova is a modern simplified C++ with a touch of Lua, designed for clarity and mo
 
 ```
 fn       if       else     for      return
-break    continue class    enum     import
-typeof   sizeof   match    case     template
-try      catch
+break    continue class    enum
+typeof   sizeof   switch   case
+import   template try      catch
 ```
 
 ---
@@ -38,11 +38,11 @@ try      catch
 ## 🔤 Literals
 
 ```nova
-123         // integer  
-3.14        // float  
-"hello"     // string  
-'c'         // char  
-true, false // boolean  
+123         // integer
+3.14        // float
+"hello"     // string
+'c'         // char
+true, false // boolean
 null        // null value
 ```
 
@@ -51,11 +51,11 @@ null        // null value
 ## 🧮 Operators
 
 ```nova
-+   -   *   /   %         // arithmetic  
-==  !=  <   >   <=  >=    // comparison  
-&&  ||  !                 // logical  
++   -   *   /   %         // arithmetic
+==  !=  <   >   <=  >=    // comparison
+&&  ||  !                 // logical
 &   |   ^   ~   <<  >>    // bitwise
-=   +=  -=  *=  /=  ...   // assignment  
+=   +=  -=  *=  /=  ...   // assignment
 ```
 
 ---
@@ -106,7 +106,7 @@ for int i = 0; i < 10; ++i {
 }
 ```
 
-*for iterators and generators, too*           
+*for iterators and generators, too*
 
 ```nova
 for string s = it.next() {
@@ -144,7 +144,7 @@ enum Color {
 ## 🧩 Match Expression
 
 ```nova
-match color {
+switch color {
   case Red:
     print("Stop")
   case Green:
