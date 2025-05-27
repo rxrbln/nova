@@ -25,7 +25,7 @@ local Precedence = {
 
 -- Lexer: returns tokens as {type=..., value=...}
 function Parser.tokenize(input)
-  local keywords = {["fn"]=true, ["let"]=true, ["if"]=true, ["else"]=true, ["while"]=true, ["return"]=true}
+  local keywords = {["fn"]=true, ["if"]=true, ["else"]=true, ["while"]=true, ["return"]=true}
   local tokens, i, len = {}, 1, #input
 
   local function is_space(c) return c == ' ' or c == '\n' or c == '\r' or c == '\t' end
@@ -38,6 +38,7 @@ function Parser.tokenize(input)
     if is_space(c) then
       i = i + 1
 
+    -- comment
     elseif c == "/" and input:sub(i+1,i+1) == "/" then
       i = i + 2
       while i <= len and input:sub(i,i) ~= "\n" do i = i + 1 end
@@ -149,16 +150,23 @@ function Parser.new(tokens)
 
   function self:parse_statement()
     local tok = self:peek()
-    if tok.type == TokenType.Keyword then
-      if tok.value == "let" then return self:parse_let()
-      elseif tok.value == "fn" then return self:parse_function()
-      elseif tok.value == "if" then return self:parse_if()
-      elseif tok.value == "while" then return self:parse_while()
-      elseif tok.value == "return" then
-        self:next()
-        return {type="return", value=self:parse_expression()}
+
+    if tok.type == TokenType.Keyword and tok.value == "fn" then
+     return self:parse_function()
+    elseif tok.type == TokenType.Keyword and tok.value == "if" then
+      return self:parse_if()
+    elseif tok.type == TokenType.Keyword and tok.value == "while" then
+      return self:parse_while()
+    elseif tok.type == TokenType.Keyword and tok.value == "return" then
+      self:next()
+      return {type="return", value=self:parse_expression()}
+    elseif tok.type == TokenType.Ident then
+      local next_tok = self.tokens[self.pos + 1]
+      if next_tok and next_tok.type == TokenType.Ident then
+        return self:parse_typed_declaration()
       end
     end
+
     return self:parse_expression()
   end
 
@@ -173,12 +181,17 @@ function Parser.new(tokens)
     return body
   end
 
-  function self:parse_let()
-    self:expect("let")
-    local ident = self:expect(TokenType.Ident).value
+  function self:parse_typed_declaration()
+    local type_name = self:expect(TokenType.Ident).value
+    local name = self:expect(TokenType.Ident).value
     self:expect("=")
-    local expr = self:parse_expression()
-    return {type="let", name=ident, value=expr}
+    local value = self:parse_expression()
+    return {
+      type = "declaration",
+      varType = type_name,
+      name = name,
+      value = value
+    }
   end
 
   function self:parse_function()

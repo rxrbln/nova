@@ -1,11 +1,12 @@
 local Parser = require("lang/parser")
 
 local code = [[
-  fn add(a, b) {
-    return a + b;
+  // test
+  fn square(int ) {
+    return x * x;
   }
 
-  let result = add(10, 20);
+  int y = square(5);
 ]]
 
 local tokens = Parser.tokenize(code)
