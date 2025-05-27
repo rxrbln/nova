@@ -10,7 +10,7 @@ local code = [[
 
   // test
   fn int, float square(int x, float y) {
-    int a, b;
+    int a = 0, b = 1, c;
     a = x;
     if x > 0 {
       return x * x;
@@ -25,9 +25,23 @@ local code = [[
   int y = square(5);
 ]]
 
+local code = [[
+  fn int test(int x) {
+    return x + 2
+  }
+]]
+
+
 local tokens = Parser.tokenize(code)
 local parser = Parser.new(tokens)
 local ast = parser:parse()
 
 require("inspect")
 print(inspect(ast))
+
+local Codegen = require("codegen/codegen")
+
+codegen = Codegen:new()
+insns = codegen:generate(ast.body)
+
+print(inspect(insns))

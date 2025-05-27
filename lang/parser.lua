@@ -237,33 +237,27 @@ function Parser.new(tokens)
   end
 
   function self:parse_declaration()
-    -- Parse the type first
+    -- Parse the common type for all vars
     local var_type = self:parse_type()
+    local decls = {}
 
-    -- Parse first variable name
-    local var_names = {}
-    table.insert(var_names, self:expect(TokenType.Ident).value)
+    repeat
+      -- Parse variable name
+      local var_name = self:expect(TokenType.Ident).value
 
-    -- Parse comma-separated additional variable names
-    while self:peek().value == "," do
-      self:next() -- consume comma
-      table.insert(var_names, self:expect(TokenType.Ident).value)
-    end
+      -- Optional initializer for this variable
+      local init = nil
+      if self:peek().value == "=" then
+        self:next() -- consume '='
+        init = self:parse_expression()
+      end
 
-    -- Optional initialization for each var (for simplicity, only first var)
-    local init = nil
-    if self:peek().value == "=" then
-      self:next()
-      init = self:parse_expression()
-    end
+      table.insert(decls, {type = "decl", varType = var_type, name = var_name, value = init})
+    until self:peek().value ~= "," or not self:next()
 
     self:expect(";")
 
-    -- Return multiple declarations, one for each variable
-    local decls = {}
-    for _, name in ipairs(var_names) do
-      table.insert(decls, {type="decl", varType=var_type, name=name, value=init})
-    end
+    -- Return all declarations as a block or list
     return decls
   end
 
