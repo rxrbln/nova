@@ -1,16 +1,16 @@
 
-// register: x0 .. x31, xlen pc: xlen-1
-// ISA:   31..25  24...20 19...15 14...12 11...7  6...0
-// R-type funct7  rs2     rs1     funct3  rd      opcode
-// I-type imm11:0         rs1     funct3  rd      opcode
-// S-type imm11:5 rs2     rs1     funct3  imm4:0  opcode
-// U-type imm31:12                        rd      opcode
+-- register: x0 .. x31, xlen pc: xlen-1
+-- ISA:   31..25  24...20 19...15 14...12 11...7  6...0
+-- R-type funct7  rs2     rs1     funct3  rd      opcode
+-- I-type imm11:0         rs1     funct3  rd      opcode
+-- S-type imm11:5 rs2     rs1     funct3  imm4:0  opcode
+-- U-type imm31:12                        rd      opcode
 
-// source reg: s2, s1   dest reg: rd
-// immedaites are sign extended, bit31 always sign
+-- source reg: s2, s1   dest reg: rd
+-- immedaites are sign extended, bit31 always sign
 
-let opcode = {
-    // RV32I
+local opcode = {
+    -- RV32I
     ["add"] = {0b000000000000110011, t="r"},
     ["jalr"] = {0b0001100111, t="i"},
     ["addi"] = {0b0000010011, t="i"},
@@ -62,7 +62,7 @@ CSRRC
 CSRRWI
 CSRRSI
 CSRRCI
-// RV32M
+-- RV32M
 MUL
 MULH
 MULHSU
@@ -71,7 +71,7 @@ DIV
 DIVU
 REM
 REMU
-// RV64I
+-- RV64I
 LWU
 LD
 SD
@@ -87,13 +87,13 @@ SUBW
 SLLW
 SRLW
 SRAW
-// RV64M
+-- RV64M
 MULW
 DIVW
 DIVUW
 REMW
 REMUW
-// RV32F
+-- RV32F
 FLW
 FSW
 FMADD.S
@@ -124,7 +124,7 @@ FCVT.L.S
 FCVT.LU.S
 FCVT.S.L
 FCVT.S.LU
-// RV32D
+-- RV32D
 FLD
 FSD
 FMADD.D
@@ -151,7 +151,7 @@ FCVT.W.D
 FCVT.WU.D
 FCVT.D.W
 FCVT.D.WU
-// RV64D
+-- RV64D
 FCVT.L.D
 FCVT.LU.D
 FMV.X.D
@@ -161,7 +161,7 @@ FMV.D.X
 //]]
 }
 
-let pseudo = {
+local pseudo = {
     ["ret"] = {"jalr", "zero", "ra", 0},
     ["nop"] = {"addi", "zero", "zero", 0},
 //[[
@@ -215,12 +215,12 @@ fence fence iorw, iorw Fence on all memory and I/O
 //]]
 }
 
-let reg = {
+local reg = {
     x0 = 0, x1 = 1, x2 = 2, x3 = 3, x4 = 4, x5 = 5, x6 = 6, x7 = 7,
     x8 = 8, x9 = 9, x10 = 10, x11 = 11, x12 = 12, x13 = 13, x14 = 14, x15 = 15,
     x16 = 16, x17 = 17, x18 = 18, x19 = 19, x20 = 20, x21 = 21, x22 = 22, x23 = 23,
     x24 = 24, x25 = 25, x26 = 26, x27 = 27, x28 = 28, x29 = 29, x30 = 30, x31 = 31,
-//} let abireg = {
+//} local abireg = {
     zero = 0, ra = 1, sp = 2, gp = 3, tp = 4, t0 = 5, t1 = 6, t2 = 7,
     s0 = 8, s1 = 9, a0 = 10, a1 = 11, a2 = 12, a3 = 13, a4 = 14, a5 = 15,
     a6 = 16, a7 = 17, s2 = 18, s3 = 19, s4 = 20, s5 = 21, s6 = 22, s7 = 23,
@@ -229,48 +229,48 @@ let reg = {
 }
 
 
-let fn conv_reg(r, op, rname)
-    let _r = reg[r]
+local function conv_reg(r, op, rname)
+    local _r = reg[r]
     if not _r then throw(("Invalid reg '%s' for opcode '%s' %s"):fmt(r or "nil", op or "nil", rname or "nil")) end
     return _r
 end
 
-fn emit_r(s, op, opc, rd, rs1, rs2)
-   let o = opc[1]
+function emit_r(s, op, opc, rd, rs1, rs2)
+   local o = opc[1]
    rd, rs1, rs2 = conv_reg(rd, op, "rd"), conv_reg(rs1, op, "rs1"), conv_reg(rs2, op, "rs2")
-   let fn3 = ((o >> 7) & 0b111)
-   let fn7 = ((o >> 10) & 0b1111111)
+   local fn3 = ((o >> 7) & 0b111)
+   local fn7 = ((o >> 10) & 0b1111111)
    s[#s + 1] = fn7 << 25 | rs2 << 20 | rs1 << 15 | fn3 << 12 | rd << 7 | (o & 0b1111111)
 end
 
-fn emit_i(s, op, opc, rd, rs1, imm)
-   let o = opc[1]
+function emit_i(s, op, opc, rd, rs1, imm)
+   local o = opc[1]
    rd, rs1 = conv_reg(rd, op, "rd"), conv_reg(rs1, op, "rs1")
-   let fn3 = ((o >> 7) & 0b111)
+   local fn3 = ((o >> 7) & 0b111)
    s[#s + 1] = imm << 20 | rs1 << 15 | fn3 << 12 | rd << 7 | (o & 0b1111111)
 end
 
-fn emit_s(s, op, opc, imm, rs1, rs2)
-// S-type imm11:5 rs2     rs1     funct3  imm4:0  opcode
-   let o = opc[1]
+function emit_s(s, op, opc, imm, rs1, rs2)
+-- S-type imm11:5 rs2     rs1     funct3  imm4:0  opcode
+   local o = opc[1]
    rs1, rs2 = conv_reg(rs1, op, "rs1"), conv_reg(rs2, op, "rs2")
-   let fn3 = ((o >> 7) & 0b111)
+   local fn3 = ((o >> 7) & 0b111)
    s[#s + 1] = imm << 20 | rs1 << 15 | fn3 << 12 | rd << 7 | (o & 0b1111111)
 end
 
-fn emit_u(s, op, opc, rd, imm)
-   let o = opc[1]
+function emit_u(s, op, opc, rd, imm)
+   local o = opc[1]
    rd = conv_reg(rd, op, "rd")
    s[#s + 1] = imm << 12 | rd << 7 | (o & 0b1111111)
 end
 
 
-fn emit_insn(s, op, ...)
-   // pseudo insn?
-   let opc = pseudo[op]
+function emit_insn(s, op, ...)
+   -- pseudo insn?
+   local opc = pseudo[op]
    if opc then return emit_insn(s, unpack(opc)) end
    
-   let opc = opcode[op]
+   local opc = opcode[op]
    if not opc then throw("opcode '" .. op .. "' not supported") end
    if opc.t == "r" then
       emit_r(s, op, opc, ...)
@@ -285,38 +285,38 @@ fn emit_insn(s, op, ...)
    end
 end
 
-// ELF writer
-let char = string.char
-let fn u8(i)
+-- ELF writer
+local char = string.char
+local function u8(i)
    return char(i)
 end
 
-let fn u8(i)
+local function u8(i)
    return char(i)
 end
 
-let fn u16(i)
+local function u16(i)
    return char(i & 0xff) .. char(i >> 8 & 0xff)
 end
 
-let fn u32(i)
+local function u32(i)
    return char(i & 0xff) .. char(i >> 8 & 0xff) .. char(i >> 16 & 0xff) .. char(i >> 24 & 0xff)
 end
 
-let fn u64(i)
-   let lo, hi = i & 0xffffffff, 0 // TODO!
+local function u64(i)
+   local lo, hi = i & 0xffffffff, 0 -- TODO!
    return char(lo >>  0 & 0xff) .. char(lo >>  8 & 0xff) .. char(lo >> 16 & 0xff) .. char(lo >> 24 & 0xff) ..
           char(hi >> 32 & 0xff) .. char(hi >> 40 & 0xff) .. char(hi >> 48 & 0xff) .. char(hi >> 56 & 0xff)
 end
 
-let uN = u64
+local uN = u64
 
 ELFCLASS64 = 2
 ELFDATA2LSB = 1
 ELFOSABI_LINUX = 0x3
 
 ET_REL = 1
-EM_RISCV = 243 // RISC-V
+EM_RISCV = 243 -- RISC-V
 EF_RISCV_FLOAT_ABI_DOUBLE = 0x0004
 SHT_NULL = 0
 SHT_PROGBITS = 1
@@ -349,11 +349,11 @@ STT_FILE = 4
 STT_LOPROC = 13
 STT_HIPROC = 15
 
-let elfh = {
+local elfh = {
    e_indent = {
       magic = "\x7fELF",
-      class = ELFCLASS64, // 64bit
-      data = ELFDATA2LSB, // little-endioan
+      class = ELFCLASS64, -- 64bit
+      data = ELFDATA2LSB, -- little-endioan
       version = 1,
       osabi = ELFOSABI_LINUX,
       abiversion = 0,
@@ -366,15 +366,15 @@ let elfh = {
    e_phoff,
    e_shoff,
    e_flags = EF_RISCV_FLOAT_ABI_DOUBLE,
-   e_ehsize = 64, // TODO
+   e_ehsize = 64, -- TODO
    e_phentsize,
    e_phnum,
-   e_shentsize = 64, // TODO
+   e_shentsize = 64, -- TODO
    e_shnum,
    e_shstrndx,
 }
 
-fn write_elf_header(f, elfh)
+function write_elf_header(f, elfh)
    f:write(elfh.e_indent.magic)
    f:write(u8(elfh.e_indent.class))
    f:write(u8(elfh.e_indent.data))
@@ -398,7 +398,7 @@ fn write_elf_header(f, elfh)
    f:write(u16(elfh.e_shstrndx or 0))
 end
 
-fn write_elf_sect_header(f, s)
+function write_elf_sect_header(f, s)
    f:write(u32(s.sh_name or 0))
    f:write(u32(s.sh_type or 0))
    f:write(uN(s.sh_flags or 0))
@@ -411,7 +411,7 @@ fn write_elf_sect_header(f, s)
    f:write(uN(s.sh_entsize or 0))
 end
 
-fn write_elf_symbol(f, s)
+function write_elf_symbol(f, s)
    f:write(u32(s.st_name or 0))
    f:write(u8(s.st_info or 0))
    f:write(u8(s.st_other or 0))
@@ -420,71 +420,71 @@ fn write_elf_symbol(f, s)
    f:write(uN(s.st_size or 0))
 end
 
-let shstrtab = {
-   "", // 1st must be NUL
+local shstrtab = {
+   "", -- 1st must be NUL
    len = 1
 } 
 
-let strtab = {
-   "", // 1st must be NUL
+local strtab = {
+   "", -- 1st must be NUL
    len = 1
 } 
 
-fn write_strtab(f, strtab)
+function write_strtab(f, strtab)
    for i, s in ipairs(strtab) do
       f:write(s, "\0")
    end
 end
 
-let sections = {}
+local sections = {}
 
-let fn elf_str(strtab, s)
-   // TODO: optimize substrings
+local function elf_str(strtab, s)
+   -- TODO: optimize substrings
    strtab[#strtab + 1] = s
-   let _ = strtab.len
+   local _ = strtab.len
    strtab.len = strtab.len + #s + 1
    return _
 end
 
-fn dump(o)
+function dump(o)
    for k, v in pairs(o) do print(k, v) end
 end
 
-fn write_elf(f, elfh, text, symbols)
-   let off
-   f:seek("set", 64) // header
+function write_elf(f, elfh, text, symbols)
+   local off
+   f:seek("set", 64) -- header
    
-   // write section:
-   sections[#sections + 1] = {} // null
+   -- write section:
+   sections[#sections + 1] = {} -- null
 
-   // .text
-   let text_sec = #sections
+   -- .text
+   local text_sec = #sections
    sections[#sections + 1] = {sh_name = elf_str(shstrtab, ".text"), sh_type = SHT_PROGBITS,
       sh_offset = f:seek("cur"), sh_size = #text}
    f:write(text)
 
-   // TODO: .data, .bss, ...
+   -- TODO: .data, .bss, ...
 
-   // symbols
-   let off = f:seek("cur")
+   -- symbols
+   local off = f:seek("cur")
    write_elf_symbol(f, {})
-   let nsym = 0
+   local nsym = 0
    for s, i in pairs(symbols) do
       nsym = nsym + 1
       write_elf_symbol(f, {st_name = elf_str(strtab, s), st_value = i[1], st_size = i[2],
       			   st_info = STB_GLOBAL << 4 | STT_FUNC, st_shndx = text_sec})
    end
    sections[#sections + 1] = {sh_name = elf_str(shstrtab, ".symtab"), sh_type = SHT_SYMTAB,
-   		              sh_info = nsym, sh_entsize = 0x18, sh_link = 3, // TODO: sizeof and dynamic!
+   		              sh_info = nsym, sh_entsize = 0x18, sh_link = 3, -- TODO: sizeof and dynamic!
       sh_offset = off, sh_size = f:seek("cur") - off}   
 
 
-   // strings
+   -- strings
    sections[#sections + 1] = {sh_name = elf_str(shstrtab, ".strtab"), sh_type = SHT_STRTAB,
       sh_offset = f:seek("cur"), sh_size = strtab.len}                        
    write_strtab(f, strtab)                                                    
 
-   // header strings
+   -- header strings
    sections[#sections + 1] = {sh_name = elf_str(shstrtab, ".shstrtab"), sh_type = SHT_STRTAB,
       sh_offset = f:seek("cur"), sh_size = shstrtab.len}
    write_strtab(f, shstrtab)
@@ -501,15 +501,15 @@ fn write_elf(f, elfh, text, symbols)
    write_elf_header(f, elfh)
 end
 
-// test assemble
+-- test assemble
 
-let code, symbols = {}, {}
+local code, symbols = {}, {}
 emit_insn(code, "add", "a0", "a0", "a1")
 emit_insn(code, "ret")
 
-// convert to binary string and test hexdump
+-- convert to binary string and test hexdump
 
-let text = ""
+local text = ""
 for i, o in ipairs(code) do
    print(i, ("%08x"):fmt(o))
    text = text .. u32(o)
