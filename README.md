@@ -75,6 +75,15 @@ fn main()
   print("Hello, " + name)
 ```
 
+natively supports multiple return values just likr arguments, too
+
+```nova
+fn int, int test(int x, int y)
+  return x, y
+
+int v, error = test(x, y)
+```
+
 ---
 
 ## 🔁 Control Structures
