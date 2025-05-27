@@ -168,7 +168,7 @@ function Parser.new(tokens)
     elseif tok.type == TokenType.Ident then
       local next_tok = self.tokens[self.pos + 1]
       if next_tok and next_tok.type == TokenType.Ident then
-        return self:parse_typed_declaration()
+        return self:parse_declaration()
       end
     end
 
@@ -195,16 +195,22 @@ function Parser.new(tokens)
     self:expect("struct")
     local name = self:expect(TokenType.Ident).value
     self:expect("{")
+
     local fields = {}
     while self:peek().value ~= "}" do
       local field_type = self:parse_type()
-      local field_name = self:expect(TokenType.Ident).value
+
+    -- Parse multiple field names separated by commas
+      repeat
+        local field_name = self:expect(TokenType.Ident).value
+        table.insert(fields, {type=field_type, name=field_name})
+      until self:peek().value ~= "," or not self:next()
       self:expect(";")
-      table.insert(fields, {type = field_type, name = field_name})
     end
+
     self:expect("}")
 
-    return {type = "struct", name = name, fields = fields}
+    return {type = "struct",name=name, fields=fields}
   end
 
   function self:parse_type()
@@ -230,17 +236,35 @@ function Parser.new(tokens)
     return {type="typedef",alias=alias,base=base}
   end
 
-  function self:parse_typed_declaration()
-    local type_name = self:expect(TokenType.Ident).value
-    local name = self:expect(TokenType.Ident).value
-    self:expect("=")
-    local value = self:parse_expression()
-    return {
-      type = "declaration",
-      varType = type_name,
-      name = name,
-      value = value
-    }
+  function self:parse_declaration()
+    -- Parse the type first
+    local var_type = self:parse_type()
+
+    -- Parse first variable name
+    local var_names = {}
+    table.insert(var_names, self:expect(TokenType.Ident).value)
+
+    -- Parse comma-separated additional variable names
+    while self:peek().value == "," do
+      self:next() -- consume comma
+      table.insert(var_names, self:expect(TokenType.Ident).value)
+    end
+
+    -- Optional initialization for each var (for simplicity, only first var)
+    local init = nil
+    if self:peek().value == "=" then
+      self:next()
+      init = self:parse_expression()
+    end
+
+    self:expect(";")
+
+    -- Return multiple declarations, one for each variable
+    local decls = {}
+    for _, name in ipairs(var_names) do
+      table.insert(decls, {type="decl", varType=var_type, name=name, value=init})
+    end
+    return decls
   end
 
   function self:parse_function()

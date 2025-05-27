@@ -4,13 +4,13 @@ local code = [[
   typedef int myint;
 
   struct Vec3 {
-    float x;
-    float y;
-    float z;
+  float x, y, z;
+  int id, count;
   }
 
   // test
   fn int, float square(int x, float y) {
+    int a, b;
     a = x;
     if x > 0 {
       return x * x;
