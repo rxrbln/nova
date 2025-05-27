@@ -89,7 +89,7 @@ if x > 0 {
 }
 ```
 
-### For (also to be use for while)
+### For (one one way to loop)
 
 ```nova
 for int i = 0; i < 10; ++i {
@@ -108,6 +108,8 @@ for string s = it.next() {
 ---
 
 ## 🧱 Data Structures
+
+Only one way to structure and object-oriented classes.
 
 ### Class
 
@@ -147,6 +149,8 @@ match color {
 
 ## 📦 Modules
 
+Nova does not use a pre-processor and will find defines from module exports.
+
 ```nova
 import math
 
@@ -155,3 +159,52 @@ fn main() {
 }
 ```
 
+## ⚠️ Exceptions
+
+Nova will support basic exception handling using `throw` and `catch`.
+
+### Throwing an Exception
+
+```nova
+fn risky()
+  throw "Something went wrong"
+```
+
+### Catching Exceptions
+
+```nova
+fn main() {
+  try
+    risky()
+  catch err
+    print("Error was: " + err)
+}
+```
+
+You can catch exceptions using a scoped `try`/`catch` block. The error object can be a string or structured data depending on the throw.
+
+---
+
+## 🧬 Generics
+
+Nova will eventually support generics using the `template` keyword before `fn` or `class`.
+
+### Generic Function
+
+```nova
+template<T>
+fn T identity(T value) {
+  return value
+}
+```
+
+### Generic Class
+
+```nova
+template<T>
+class Box {
+  T value
+}
+```
+
+Generics allow type-safe, reusable code without sacrificing readability.
