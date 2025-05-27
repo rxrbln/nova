@@ -2,7 +2,7 @@
 
 - By contributing changes to this code project you agree to transfer the
   copyright to the project main author and copyright holder to allow for
-  easy re-licensing should be later decide to re-license it to other, e.g.
+  easy re-licensing should we later decide to re-license it to other, e.g.
   more open and permissive licenses.
 
 ## Sustainable Use License
