@@ -200,18 +200,35 @@ function Parser.new(tokens)
   end
 
   function self:parse_function()
+    -- 1. Match the 'fn' keyword
     self:expect("fn")
+
+    -- 2. Parse return types (comma-separated identifiers)
+    local return_types = {}
+    repeat
+      local tok = self:expect(TokenType.Ident)
+      table.insert(return_types, tok.value)
+    until self:peek().value ~= "," or not self:next()
+
+    -- 3. Parse function name
     local name = self:expect(TokenType.Ident).value
+
+    -- 4. Parse parameter list
     self:expect("(")
     local params = {}
     if self:peek().value ~= ")" then
       repeat
-        table.insert(params, self:expect(TokenType.Ident).value)
+        local param_type = self:expect(TokenType.Ident).value
+        local param_name = self:expect(TokenType.Ident).value
+        table.insert(params, { type = param_type, name = param_name })
       until self:peek().value ~= "," or not self:next()
     end
     self:expect(")")
+
+    -- 5. Parse function body
     local body = self:parse_block()
-    return {type="function", name=name, params=params, body=body}
+
+    return {type="function", name=name, returnTypes=return_types, params=params, body=body}
   end
 
   function self:parse_if()
@@ -240,9 +257,8 @@ function Parser.new(tokens)
     local update = self:parse_statement()
     -- Parse body
     local body = self:parse_block()
-
     return {type="for", init=init, cond=cond, update=update, body=body}
-end
+  end
 
   function self:parse()
     local program = {}
