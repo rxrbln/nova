@@ -1,5 +1,25 @@
 -- Tokenizer and Pratt Parser for a C-like language in Lua
-local Parser = {}
+
+local Object = {}
+
+function Object:new(o)
+   o = o or {}
+   setmetatable(o, self)
+   self.__index = self
+   return o
+end
+
+
+-- Lexer: returns tokens as {type=..., value=...}
+
+Tokenizer = Object:new()
+
+function Tokenizer:new(input)
+  o = Object.new(self)
+  o.input = input
+  o.i, o.len = 1, #input
+  return o
+end
 
 -- Token types
 local TokenType = {
@@ -23,75 +43,88 @@ local Precedence = {
   ["("] = 8, -- function calls
 }
 
--- Lexer: returns tokens as {type=..., value=...}
-function Parser.tokenize(input)
-  local keywords = {["fn"]=true, ["if"]=true, ["else"]=true, ["for"]=true, ["return"]=true,
-    ["typedef"]=true, ["struct"]=true}
-  local tokens, i, len = {}, 1, #input
+local keywords = {
+  ["fn"]=true, ["if"]=true, ["else"]=true, ["for"]=true, ["return"]=true,
+  ["typedef"]=true, ["struct"]=true,
+}
 
-  local function is_space(c) return c == ' ' or c == '\n' or c == '\r' or c == '\t' end
-  local function is_alpha(c) return c:match("%a") or c == "_" end
-  local function is_digit(c) return c:match("%d") end
+local function is_space(c) return c == ' ' or c == '\n' or c == '\r' or c == '\t' end
+local function is_alpha(c) return c:match("%a") or c == "_" end
+local function is_digit(c) return c:match("%d") end
 
+function Tokenizer:next()
+  local input, i, len = self.input, self.i, self.len
   while i <= len do
-    local c = input:sub(i,i)
+    local c = input:sub(i, i)
 
     if is_space(c) then
       i = i + 1
 
     -- comment
-    elseif c == "/" and input:sub(i+1,i+1) == "/" then
+    elseif c == "/" and input:sub(i+1, i+1) == "/" then
       i = i + 2
-      while i <= len and input:sub(i,i) ~= "\n" do i = i + 1 end
+      while i <= len and input:sub(i, i) ~= "\n" do i = i + 1 end
 
     elseif is_digit(c) then
       local start = i
-      while i <= len and is_digit(input:sub(i,i)) do i = i + 1 end
-      table.insert(tokens, {type=TokenType.Number, value=tonumber(input:sub(start, i-1))})
+      while i <= len and is_digit(input:sub(i, i)) do i = i + 1 end
+      self.i = i
+      return {type=TokenType.Number, value=tonumber(input:sub(start, i-1))}
 
     elseif is_alpha(c) then
       local start = i
-      while i <= len and input:sub(i,i):match("[%w_]") do i = i + 1 end
+      while i <= len and input:sub(i, i):match("[%w_]") do i = i + 1 end
       local word = input:sub(start, i-1)
       local type = keywords[word] and TokenType.Keyword or TokenType.Ident
-      table.insert(tokens, {type=type, value=word})
+      self.i = i
+      return {type=type, value=word}
 
     elseif c == '"' then
       i = i + 1
       local start = i
-      while i <= len and input:sub(i,i) ~= '"' do i = i + 1 end
+      while i <= len and input:sub(i, i) ~= '"' do i = i + 1 end
       local str = input:sub(start, i-1)
-      i = i + 1
-      table.insert(tokens, {type=TokenType.String, value=str})
+      self.i = i + 1
+      return {type=TokenType.String, value=str}
 
     else
       local sym = c
       if (c == '=' or c == '!' or c == '<' or c == '>') and input:sub(i+1,i+1) == '=' then
         sym = c .. '='
         i = i + 1
-      elseif c == '&' and input:sub(i+1,i+1) == '&' then
+      elseif c == '&' and input:sub(i+1, i+1) == '&' then
         sym = '&&'; i = i + 1
-      elseif c == '|' and input:sub(i+1,i+1) == '|' then
+      elseif c == '|' and input:sub(i+1, i+1) == '|' then
         sym = '||'; i = i + 1
       end
-      table.insert(tokens, {type=TokenType.Symbol, value=sym})
-      i = i + 1
+      self.i = i + 1
+     return {type=TokenType.Symbol, value=sym}
     end
   end
-  table.insert(tokens, {type=TokenType.EOF, value=""})
-  return tokens
+
+  self.i = i
+  return {type=TokenType.EOF, value=""}
 end
 
--- Parser setup
-function Parser.new(tokens)
-  local self = {
-    tokens = tokens,
-    pos = 1
-  }
+function Tokenizer:peek()
+  local i = self.i
+  local token = self:next()
+  self.i = i
+  return token
+end
 
-  function self:peek() return self.tokens[self.pos] end
-  function self:next() local t = self:peek(); self.pos = self.pos + 1; return t end
-  function self:expect(type_or_val)
+Parser = Object:new()
+
+  function Parser:new(input)
+    local o = Object.new(self)
+    o.tokens = Tokenizer:new(input)
+    return o
+  end
+
+  function Parser:peek() return self.tokens:peek() end
+  function Parser:next() return self.tokens:next() end
+
+  function Parser:expect(type_or_val)
     local tok = self:next()
     if tok.type ~= type_or_val and tok.value ~= type_or_val then
       error("Expected " .. type_or_val .. ", got " .. tok.value)
@@ -100,7 +133,7 @@ function Parser.new(tokens)
   end
 
   -- Pratt parser entry point
-  function self:parse_expression(precedence)
+  function Parser:parse_expression(precedence)
     precedence = precedence or 0
     local t = self:next()
     local left = self:nud(t)
@@ -112,7 +145,7 @@ function Parser.new(tokens)
   end
 
   -- Null denotation (prefix, literals)
-  function self:nud(tok)
+  function Parser:nud(tok)
     if tok.type == TokenType.Number or tok.type == TokenType.String then
       return {type="literal", value=tok.value}
     elseif tok.type == TokenType.Ident then
@@ -132,12 +165,12 @@ function Parser.new(tokens)
   end
 
   -- Left denotation (binary infix)
-  function self:led(op_tok, left)
+  function Parser:led(op_tok, left)
     local right = self:parse_expression(Precedence[op_tok.value])
     return {type="binary", op=op_tok.value, left=left, right=right}
   end
 
-  function self:parse_call(name)
+  function Parser:parse_call(name)
     self:expect("(")
     local args = {}
     if self:peek().value ~= ")" then
@@ -149,7 +182,7 @@ function Parser.new(tokens)
     return {type="call", name=name, args=args}
   end
 
-  function self:parse_statement()
+  function Parser:parse_statement()
     local tok = self:peek()
 
     if tok.type == TokenType.Keyword and tok.value == "fn" then
@@ -166,7 +199,7 @@ function Parser.new(tokens)
       self:next()
       return {type="return", value=self:parse_expression()}
     elseif tok.type == TokenType.Ident then
-      local next_tok = self.tokens[self.pos + 1]
+      local next_tok = self:peek()
       if next_tok and next_tok.type == TokenType.Ident then
         return self:parse_declaration()
       end
@@ -175,7 +208,7 @@ function Parser.new(tokens)
     return self:parse_expression()
   end
 
-  function self:parse_block()
+  function Parser:parse_block()
     local one = self:peek().value ~= "{"
     if not one then self:expect("{") end
 
@@ -191,7 +224,7 @@ function Parser.new(tokens)
     return body
   end
 
-  function self:parse_struct()
+  function Parser:parse_struct()
     self:expect("struct")
     local name = self:expect(TokenType.Ident).value
     self:expect("{")
@@ -213,22 +246,18 @@ function Parser.new(tokens)
     return {type = "struct",name=name, fields=fields}
   end
 
-  function self:parse_type()
+  function Parser:parse_type()
     local base = self:expect(TokenType.Ident).value
     if self:peek().value == "[" then
       self:next()
       local size = self:expect(TokenType.Number).value
       self:expect("]")
-      return {
-        type = "arraytype",
-        base = base,
-        size = tonumber(size)
-      }
+      return {type = "arraytype", base = base, size = tonumber(size)}
     end
     return {type="type", name=base}
   end
 
-  function self:parse_typedef()
+  function Parser:parse_typedef()
     self:expect("typedef")
     local base = self:parse_type()
     local alias = self:expect(TokenType.Ident).value
@@ -236,7 +265,7 @@ function Parser.new(tokens)
     return {type="typedef",alias=alias,base=base}
   end
 
-  function self:parse_declaration()
+  function Parser:parse_declaration()
     -- Parse the common type for all vars
     local var_type = self:parse_type()
     local decls = {}
@@ -261,7 +290,7 @@ function Parser.new(tokens)
     return decls
   end
 
-  function self:parse_function()
+  function Parser:parse_function()
     -- 1. Match the 'fn' keyword
     self:expect("fn")
 
@@ -293,7 +322,7 @@ function Parser.new(tokens)
     return {type="function", name=name, returnTypes=return_types, params=params, body=body}
   end
 
-  function self:parse_if()
+  function Parser:parse_if()
     self:expect("if")
     local cond = self:parse_expression()
     local then_branch = self:parse_block()
@@ -305,7 +334,7 @@ function Parser.new(tokens)
     return {type="if", cond=cond, thenBranch=then_branch, elseBranch=else_branch}
   end
 
-  function self:parse_for()
+  function Parser:parse_for()
     self:expect("for")
 
     -- Parse init statement
@@ -322,7 +351,7 @@ function Parser.new(tokens)
     return {type="for", init=init, cond=cond, update=update, body=body}
   end
 
-  function self:parse()
+  function Parser:parse()
     local program = {}
     while self:peek().type ~= TokenType.EOF do
       table.insert(program, self:parse_statement())
@@ -330,8 +359,5 @@ function Parser.new(tokens)
     end
     return {type="program", body=program}
   end
-
-  return self
-end
 
 return Parser

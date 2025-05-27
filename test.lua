@@ -32,8 +32,7 @@ local code = [[
 ]]
 
 
-local tokens = Parser.tokenize(code)
-local parser = Parser.new(tokens)
+local parser = Parser:new(code)
 local ast = parser:parse()
 
 require("inspect")
