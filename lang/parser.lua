@@ -25,7 +25,7 @@ local Precedence = {
 
 -- Lexer: returns tokens as {type=..., value=...}
 function Parser.tokenize(input)
-  local keywords = {["fn"]=true, ["if"]=true, ["else"]=true, ["for"]=true, ["return"]=true}
+  local keywords = {["fn"]=true, ["if"]=true, ["else"]=true, ["for"]=true, ["return"]=true, ["typedef"]=true}
   local tokens, i, len = {}, 1, #input
 
   local function is_space(c) return c == ' ' or c == '\n' or c == '\r' or c == '\t' end
@@ -157,6 +157,8 @@ function Parser.new(tokens)
       return self:parse_if()
     elseif tok.type == TokenType.Keyword and tok.value == "for" then
       return self:parse_for()
+    elseif tok.type == TokenType.Keyword and tok.value == "typedef" then
+      return self:parse_typedef()
     elseif tok.type == TokenType.Keyword and tok.value == "return" then
       self:next()
       return {type="return", value=self:parse_expression()}
@@ -184,6 +186,29 @@ function Parser.new(tokens)
     end
     if not one then self:expect("}") end
     return body
+  end
+
+  function self:parse_type()
+    local base = self:expect(TokenType.Ident).value
+    if self:peek().value == "[" then
+      self:next()
+      local size = self:expect(TokenType.Number).value
+      self:expect("]")
+      return {
+        type = "arraytype",
+        base = base,
+        size = tonumber(size)
+      }
+    end
+    return {type="type", name=base}
+  end
+
+  function self:parse_typedef()
+    self:expect("typedef")
+    local base = self:parse_type()
+    local alias = self:expect(TokenType.Ident).value
+    self:expect(";")
+    return {type="typedef",alias=alias,base=base}
   end
 
   function self:parse_typed_declaration()

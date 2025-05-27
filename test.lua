@@ -1,6 +1,7 @@
 local Parser = require("lang/parser")
 
 local code = [[
+  typedef int myint;
   // test
   fn int, float square(int x, float y) {
     a = x;
