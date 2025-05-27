@@ -171,7 +171,7 @@ function Parser.new(tokens)
   end
 
   function self:parse_block()
-    local one = self:peek().value ~= "{" 
+    local one = self:peek().value ~= "{"
     if not one then self:expect("{") end
 
     local body = {}
@@ -216,9 +216,7 @@ function Parser.new(tokens)
 
   function self:parse_if()
     self:expect("if")
-    self:expect("(")
     local cond = self:parse_expression()
-    self:expect(")")
     local then_branch = self:parse_block()
     local else_branch = nil
     if self:peek().value == "else" then
@@ -230,9 +228,7 @@ function Parser.new(tokens)
 
   function self:parse_while()
     self:expect("while")
-    self:expect("(")
     local cond = self:parse_expression()
-    self:expect(")")
     local body = self:parse_block()
     return {type="while", cond=cond, body=body}
   end

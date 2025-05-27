@@ -3,7 +3,7 @@ local Parser = require("lang/parser")
 local code = [[
   // test
   fn square(int) {
-    if (x > 0) {
+    if x > 0 {
       return x * x;
     } else
       return -x * x
